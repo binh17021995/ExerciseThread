@@ -8,36 +8,30 @@ import android.os.Handler
 import android.os.Looper
 import android.os.Message
 import android.util.Log
-import android.view.GestureDetector
 import android.view.MotionEvent
 import android.widget.Button
 import android.widget.TextView
 import androidx.appcompat.app.AppCompatActivity
 import java.util.*
-import kotlin.concurrent.thread
 import kotlin.math.abs
 
 
 class MainActivity : AppCompatActivity() {
     private var isUpdate: Boolean = false
-    private var isKeep: Boolean = false
-    private var isBackGround: Boolean = true
+    private var isKeep: Boolean = true
     private lateinit var btnMinus: Button
     private lateinit var btnPlus: Button
     private lateinit var tvInfor: TextView
     private lateinit var mHandler: Handler
     private var y1: Float = 0F
     private var y2: Float = 0F
-    private var tb: Float = 0F
     private val rnd = Random()
-    private var color: Int = 0
-
+    private var color :Int =0
 
     companion object {
         const val MSG_UPDATE_NUMBER: Int = 100
         const val MSG_STOP_UPDATE_NUMBER: Int = 101
-        const val PAUSE_THREAD: Int = 102
-        const val MIN_DISTANCE: Float = 10F
+        const val MIN_DISTANCE: Int = 200
     }
 
     private var number: Int = 0
@@ -50,98 +44,110 @@ class MainActivity : AppCompatActivity() {
         btnPlus = findViewById(R.id.btn_plus)
         tvInfor = findViewById(R.id.tv_infor)
         listenerHandler()
-        eventListener()
 
-
-
-    }
-
-    @SuppressLint("ClickableViewAccessibility")
-    private fun eventListener() {
         btnMinus.setOnClickListener {
-            isUpdate = false
-            minusOnClick()
+            color = Color.argb(255, rnd.nextInt(100), rnd.nextInt(200),rnd.nextInt(300))
+            number--
+            tvInfor.text = "$number"
             checkFinish.cancel()
             checkFinish.start()
         }
         btnPlus.setOnClickListener {
-
-            isUpdate = false
-            plusOnClick()
+            color = Color.argb(255, rnd.nextInt(100), rnd.nextInt(200),rnd.nextInt(300))
+            number++
+            tvInfor.text = "$number"
             checkFinish.cancel()
             checkFinish.start()
         }
+
         btnMinus.setOnLongClickListener {
+            color = Color.argb(255, rnd.nextInt(100), rnd.nextInt(200),rnd.nextInt(300))
             isKeep = true
             minusThread()
-            Thread.sleep(500)
             Log.i("BBB", " check Long: ")
             checkFinish.cancel()
             Log.i("BBB", " Tại đây diễn ra tn: ")
             false
         }
         btnPlus.setOnLongClickListener {
+            color = Color.argb(255, rnd.nextInt(100), rnd.nextInt(200),rnd.nextInt(300))
             isKeep = true
             plusThread()
-            Thread.sleep(500)
             Log.i("BBB", " check Long Plus: ")
             checkFinish.cancel()
-            isUpdate = false
             Log.i("BBB", " Tại đây diễn ra tn: ")
             false
         }
-        tvInfor.setOnTouchListener { v, event ->
+
+
+        tvInfor.setOnTouchListener { _, event ->
             tvInfor.onTouchEvent(event)
             when (event.action) {
                 MotionEvent.ACTION_DOWN -> {
-                    y1 = event.rawY
-                    isUpdate = false
+                    color = Color.argb(255, rnd.nextInt(100), rnd.nextInt(200),rnd.nextInt(300))
+                    y1 = event.y
                     Log.i("BBB", " UP")
+
                 }
                 MotionEvent.ACTION_UP -> {
-                    number += (y1 - event.rawY).toInt()
+                    color = Color.argb(255, rnd.nextInt(100), rnd.nextInt(200),rnd.nextInt(300))
                     isKeep = false
-                    Thread.sleep(500)
                     isUpdate = true
                     mHandler.postDelayed({
                         descendNumber()
-                    }, 1000)
+                    },2000)
+
+                    Log.i("BBB", " UP")
 
                 }
                 MotionEvent.ACTION_MOVE -> {
-                    val x = (y1 - event.rawY)               // << add
-                    tvInfor.text = "${number + x.toInt()}"  // << add
+                    color = Color.argb(255, rnd.nextInt(100), rnd.nextInt(200),rnd.nextInt(300))
+                    y2 = event.y
+                    val valueY: Float = y2 - y1
+                    if (abs(valueY) > MIN_DISTANCE) {
+                        if (y2 > y1) {
+                            isKeep = true
+                            minusThread()
+                        } else {
+                            isKeep = true
+                            plusThread()
+                        }
+                    }
+                    Log.i("BBB", "MOVE $y2 $y1")
 
                 }
+
             }
+
             true
         }
+
     }
 
-    private val checkFinish = object : CountDownTimer(1000, 1000) {
+    private val checkFinish = object : CountDownTimer(2000, 1000) {
         override fun onTick(millisUntilFinished: Long) {
             Log.i("BBB", "vào đây không")
             isKeep = false
-            isBackGround = false
-            isUpdate = false
         }
 
         override fun onFinish() {
             Log.i("BBB", "Đây OnFinish")
-            Thread.sleep(500)
             isUpdate = true
             descendNumber()
         }
     }
 
+
     private fun minusThread() {
         Thread {
+
             Log.i("BBB", "như tn")
             while (isKeep) {
                 number -= 1
                 val message = Message()
                 message.what = MSG_UPDATE_NUMBER
                 message.arg1 = number
+                message.arg2 = color
                 mHandler.sendMessage(message)
                 try {
                     Thread.sleep(10)
@@ -153,24 +159,6 @@ class MainActivity : AppCompatActivity() {
             mHandler.sendEmptyMessage(MSG_STOP_UPDATE_NUMBER)
         }.start()
 
-    }
-
-    private fun minusOnClick() {
-        number--
-        tvInfor.text = "$number"
-        if (number % 100 == 0) {
-            color = Color.argb(255, rnd.nextInt(200), rnd.nextInt(300), rnd.nextInt(200))
-            tvInfor.setTextColor(color)
-        }
-    }
-
-    private fun plusOnClick() {
-        number++
-        tvInfor.text = "$number"
-        if (number % 100 == 0) {
-            color = Color.argb(255, rnd.nextInt(200), rnd.nextInt(300), rnd.nextInt(200))
-            tvInfor.setTextColor(color)
-        }
     }
 
     private fun plusThread() {
@@ -180,6 +168,7 @@ class MainActivity : AppCompatActivity() {
                 val message = Message()
                 message.what = MSG_UPDATE_NUMBER
                 message.arg1 = number
+                message.arg2 = color
                 mHandler.sendMessage(message)
                 try {
                     Thread.sleep(10)
@@ -189,6 +178,7 @@ class MainActivity : AppCompatActivity() {
             }
             mHandler.sendEmptyMessage(MSG_STOP_UPDATE_NUMBER)
         }.start()
+
 
     }
 
@@ -199,15 +189,7 @@ class MainActivity : AppCompatActivity() {
                     MSG_UPDATE_NUMBER -> {
                         isUpdate = true
                         tvInfor.text = msg.arg1.toString()
-                        if (number % 100 == 0) {
-                            color = Color.argb(
-                                255,
-                                rnd.nextInt(200),
-                                rnd.nextInt(300),
-                                rnd.nextInt(200)
-                            )
-                            tvInfor.setTextColor(color)
-                        }
+                        tvInfor.setTextColor(msg.arg2)
                     }
                     MSG_STOP_UPDATE_NUMBER -> {
                         isKeep = false
@@ -227,9 +209,10 @@ class MainActivity : AppCompatActivity() {
                     val message = Message()
                     message.what = MSG_UPDATE_NUMBER
                     message.arg1 = number
+                    message.arg2 = color
                     mHandler.sendMessage(message)
                     try {
-                        Thread.sleep(40)
+                        Thread.sleep(10)
                     } catch (e: InterruptedException) {
                         e.printStackTrace()
                     }
@@ -239,9 +222,10 @@ class MainActivity : AppCompatActivity() {
                     val message = Message()
                     message.what = MSG_UPDATE_NUMBER
                     message.arg1 = number
+                    message.arg2 = color
                     mHandler.sendMessage(message)
                     try {
-                        Thread.sleep(40)
+                        Thread.sleep(10)
                     } catch (e: InterruptedException) {
                         e.printStackTrace()
                     }
@@ -250,6 +234,7 @@ class MainActivity : AppCompatActivity() {
             }
             mHandler.sendEmptyMessage(MSG_STOP_UPDATE_NUMBER)
         }.start()
+
 
     }
 
